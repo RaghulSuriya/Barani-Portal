@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("CUSTOMER") // MANAGER, EMPLOYEE, CUSTOMER
+  status    String   @default("PENDING") // PENDING, ACTIVE, REJECTED
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  payments       Payment[]
+  memberships    GroupMember[]
+}
+
+model ChitScheme {
+  id                 String   @id @default(cuid())
+  name               String
+  totalAmount        Decimal
+  maxMembers         Int
+  durationMonths     Int
+  monthlyInstallment Decimal
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  groups ChitGroup[]
+}
+
+model ChitGroup {
+  id            String   @id @default(cuid())
+  name          String   // e.g., "Oct 2023 - Scheme A"
+  schemeId      String
+  scheme        ChitScheme @relation(fields: [schemeId], references: [id])
+  startDate     DateTime
+  status        String   @default("ACTIVE") // ACTIVE, COMPLETED
+  currentMonth  Int      @default(1)
+  
+  members       GroupMember[]
+  auctions      Auction[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model GroupMember {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  groupId   String
+  group     ChitGroup @relation(fields: [groupId], references: [id])
+  joinedAt  DateTime @default(now())
+  
+  ticketNumber Int?     // e.g. 1 to 20
+}
+
+model Auction {
+  id          String   @id @default(cuid())
+  groupId     String
+  group       ChitGroup @relation(fields: [groupId], references: [id])
+  month       Int
+  winnerId    String?
+  winningBid  Decimal
+  dividend    Decimal
+  auctionDate DateTime @default(now())
+  
+  payments    Payment[]
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  auctionId   String?
+  auction     Auction? @relation(fields: [auctionId], references: [id])
+  amount      Decimal
+  status      String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  method      String?  // CASH, UPI, BANK_TRANSFER
+  paidAt      DateTime?
+  referenceId String?
+  createdAt   DateTime @default(now())
+}
